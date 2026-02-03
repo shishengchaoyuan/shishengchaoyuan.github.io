@@ -18,7 +18,9 @@ const LANG_MAP = {
 function scanDirectory(currentPath) {
     const name = path.basename(currentPath === '.' ? path.resolve(currentPath) : currentPath);
     const stats = fs.statSync(currentPath);
-    const relPath = path.relative(path.resolve(TARGET_DIR), path.resolve(currentPath)).replace(/\\/g, '/') || '.';
+let relPath = path.relative(path.resolve(TARGET_DIR), path.resolve(currentPath)).replace(/\\/g, '/');
+// 如果是根目录文件，relPath 会是文件名；如果是根目录本身，我们才标记为 '.'
+if (relPath === '') relPath = '.';
 
     if (stats.isDirectory()) {
         const files = fs.readdirSync(currentPath)
