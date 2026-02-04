@@ -100,15 +100,7 @@
         <div class="tree-area">
             <ul class="tree" id="fileTree"><li class="node dir-node" data-path=".">
                     <div class="label folder"><span class="icon"></span>.</div>
-                    <ul><li class="node file-node" data-path="build (15).js">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="javascript">
-                        <span class="icon"></span>build (15).js
-                    </div>
-                </li><li class="node file-node" data-path="index (15).html">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="markup">
-                        <span class="icon"></span>index (15).html
-                    </div>
-                </li><li class="node dir-node" data-path="shksd">
+                    <ul><li class="node dir-node" data-path="shksd">
                     <div class="label folder"><span class="icon"></span>shksd</div>
                     <ul><li class="node file-node" data-path="shksd/huashu.md">
                     <div class="label file-label" onclick="loadFile(this)" data-lang="markdown">
@@ -35825,16 +35817,7 @@
          */
         async function loadFile(el) {
             const li = el.closest('.file-node');
-            const li = el.closest('.file-node');
             const path = li.getAttribute('data-path');
-    
-           // 🛡️ 终极防御：如果路径是 '.' 或者空，绝对不要去 fetch，直接拦截
-           if (!path || path === '.') {
-              console.warn('道友请留步，不能请求根目录本身');
-              return;
-              }
-    
-    // ... 后续的 fetch 逻辑
             const lang = el.getAttribute('data-lang');
             currentFile = path;
 

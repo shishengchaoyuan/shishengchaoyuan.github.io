@@ -192,16 +192,7 @@ const finalTemplate = `
          */
         async function loadFile(el) {
             const li = el.closest('.file-node');
-            const li = el.closest('.file-node');
             const path = li.getAttribute('data-path');
-    
-           // 🛡️ 终极防御：如果路径是 '.' 或者空，绝对不要去 fetch，直接拦截
-           if (!path || path === '.') {
-              console.warn('道友请留步，不能请求根目录本身');
-              return;
-              }
-    
-    // ... 后续的 fetch 逻辑
             const lang = el.getAttribute('data-lang');
             currentFile = path;
 
