@@ -192,7 +192,6 @@ const finalTemplate = `
          */
         async function loadFile(el) {
             const li = el.closest('.file-node');
-            const li = el.closest('.file-node');
             const path = li.getAttribute('data-path');
     
            // 🛡️ 终极防御：如果路径是 '.' 或者空，绝对不要去 fetch，直接拦截
