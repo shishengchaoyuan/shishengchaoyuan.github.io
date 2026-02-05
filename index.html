@@ -100,28 +100,13 @@
         <div class="tree-area">
             <ul class="tree" id="fileTree"><li class="node dir-node" data-path=".">
                     <div class="label folder"><span class="icon"></span>.</div>
-                    <ul><li class="node file-node" data-path="build (15).js">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="javascript">
-                        <span class="icon"></span>build (15).js
-                    </div>
-                </li><li class="node file-node" data-path="index (15).html">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="markup">
-                        <span class="icon"></span>index (15).html
-                    </div>
-                </li><li class="node dir-node" data-path="shksd">
-                    <div class="label folder"><span class="icon"></span>shksd</div>
-                    <ul><li class="node file-node" data-path="shksd/huashu.md">
+                    <ul><li class="node file-node" data-path="README.md">
                     <div class="label file-label" onclick="loadFile(this)" data-lang="markdown">
-                        <span class="icon"></span>huashu.md
+                        <span class="icon"></span>README.md
                     </div>
-                </li><li class="node file-node" data-path="shksd/黄庭内外景经.md">
+                </li><li class="node file-node" data-path="SUMMARY.md">
                     <div class="label file-label" onclick="loadFile(this)" data-lang="markdown">
-                        <span class="icon"></span>黄庭内外景经.md
-                    </div>
-                </li></ul>
-                </li><li class="node file-node" data-path="tshtzjj.md">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="markdown">
-                        <span class="icon"></span>tshtzjj.md
+                        <span class="icon"></span>SUMMARY.md
                     </div>
                 </li><li class="node dir-node" data-path="佛藏">
                     <div class="label folder"><span class="icon"></span>佛藏</div>
@@ -35776,10 +35761,6 @@
                     </div>
                 </li></ul>
                 </li></ul>
-                </li><li class="node file-node" data-path="黄庭内景经.md">
-                    <div class="label file-label" onclick="loadFile(this)" data-lang="markdown">
-                        <span class="icon"></span>黄庭内景经.md
-                    </div>
                 </li></ul>
                 </li></ul>
         </div>
@@ -35836,6 +35817,7 @@
     // ... 后续的 fetch 逻辑
             const lang = el.getAttribute('data-lang');
             currentFile = path;
+
             document.querySelectorAll('.label').forEach(l => l.classList.remove('active-node'));
             el.classList.add('active-node');
 
