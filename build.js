@@ -259,8 +259,8 @@ const finalTemplate = `
                 lastLineNum = lines.length;
                 document.getElementById('jumpInput').placeholder = lastLineNum;
 
-                // 需求：底部多出 20 行
-                text = text + "\\n".repeat(20);
+                // 需求：底部多出 25 行
+                text = text + "\\n".repeat(25);
 
                 const viewer = document.getElementById('codeViewer');
                 viewer.textContent = text;
