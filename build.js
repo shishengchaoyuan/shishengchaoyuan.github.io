@@ -105,6 +105,42 @@ const finalTemplate = `
         button:hover { background: var(--border-color); }
         button:active { background: var(--accent); color: white; }
 
+        /* 搜索框容器置顶并美观 */
+.search-container {
+    padding: 10px;
+    background: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky; /* 确保在侧边栏内部置顶 */
+    top: 0;
+    z-index: 10;
+}
+
+#treeSearch {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* 圆角设计 */
+    background: var(--bg-main);
+    color: var(--text-color);
+    font-size: 13px;
+    box-sizing: border-box; /* 防止撑破容器 */
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#treeSearch:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 5px rgba(0, 95, 184, 0.3);
+}
+
+/* 搜索匹配到的字符高亮样式 */
+.search-highlight {
+    background-color: #ffcc00; /* 橙黄色 */
+    color: #000 !important;    /* 确保文字黑色清晰 */
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
         /* 内容区与行号适配 */
         .code-view { flex-grow: 1; overflow: auto; background: var(--bg-main); }
         [data-theme="light"] code[class*="language-"], [data-theme="light"] .token { color: #000000 !important; } 
@@ -147,6 +183,11 @@ const finalTemplate = `
             <button style="flex:1" onclick="locateCurrent()">定位</button>
             <button style="flex:1" onclick="switchTheme()">🌓模式</button>
         </div>
+
+        <div class="search-container">
+            <input type="text" id="treeSearch" placeholder="搜索目录或文件名..." oninput="searchTree()">
+        </div>
+
         <div class="tree-area">
             <ul class="tree" id="fileTree">${treeHtmlBody}</ul>
         </div>
@@ -353,6 +394,101 @@ const finalTemplate = `
             else sb.classList.toggle('hidden');
         }
     </script>
+
+<script>
+        /**
+        * 带有关键词高亮的实时搜索
+        */
+        function searchTree() {
+            const query = document.getElementById('treeSearch').value;
+            const allNodes = document.querySelectorAll('.node');
+
+            // 每次搜索前，先移除旧的高亮，恢复原始文本
+            allNodes.forEach(node => {
+                const label = node.querySelector('.label');
+                // 如果之前备份过原始 HTML，则恢复它
+                if (label.getAttribute('data-origin')) {
+                    label.innerHTML = label.getAttribute('data-origin');
+                }
+            });
+
+            if (!query) {
+                allNodes.forEach(node => node.style.display = '');
+                return;
+            }
+
+            const regex = new RegExp('(' + query + ')', 'gi'); // 全局、忽略大小写匹配
+
+            allNodes.forEach(node => {
+                const label = node.querySelector('.label');
+                const originalText = label.innerText; // 只取文字部分，不取图标
+
+                // 备份原始 HTML（包含图标和文字），用于下次搜索前还原
+                if (!label.getAttribute('data-origin')) {
+                    label.setAttribute('data-origin', label.innerHTML);
+                }
+
+                if (originalText.toLowerCase().includes(query.toLowerCase())) {
+                    // 显示该节点
+                    node.style.display = '';
+
+                    // 执行高亮替换：只针对文字部分进行包裹
+                    // 注意：这里用了一种简单的处理方式，即替换内容。
+                    // 复杂的项目建议使用专门的 mark.js 库，
+                    // 这里的逻辑是：保持图标不变，只高亮匹配的文本。
+                    const iconHtml = label.querySelector('.icon').outerHTML;
+                    const highlightedText = originalText.replace(regex, '<span class="search-highlight">$1</span>');
+                    label.innerHTML = iconHtml + highlightedText;
+
+                    // 递归展开父级逻辑
+                    let p = node.parentElement;
+                    while (p && p.id !== 'fileTree') {
+                        if (p.tagName === 'LI') {
+                            p.style.display = '';
+                            p.classList.add('open');
+                        }
+                        p = p.parentElement;
+                    }
+                } else {
+                    node.style.display = 'none';
+                }
+            });
+
+            // 向上修正：确保有可见子项的父目录必须显示
+            const dirNodes = document.querySelectorAll('.dir-node');
+            Array.from(dirNodes).reverse().forEach(dir => {
+                const hasVisibleChild = dir.querySelector('ul > li:not([style*="display: none"])');
+                if (hasVisibleChild) {
+                    dir.style.display = '';
+                    dir.classList.add('open');
+                }
+            });
+        }
+    </script>
+
+    <script>
+        /**
+        * 需求实现：页面加载后默认打开指定文件
+        */
+        window.addEventListener('DOMContentLoaded', function() {
+            // 1. 指定默认文件路径
+            var defaultPath = "README.md"; 
+
+            // 2. 使用单引号和加号进行拼接，避开所有反引号
+            var selector = '.file-node[data-path="' + defaultPath + '"] .file-label';
+            var targetNode = document.querySelector(selector);
+
+            if (targetNode) {
+                // 3. 执行加载
+                loadFile(targetNode);
+                // 4. 执行定位
+                locateAction(defaultPath);
+            } else {
+                console.log("未找到预设的默认文件: " + defaultPath);
+            }
+        });
+    </script>
+
 </body>
 </html>
 `;
