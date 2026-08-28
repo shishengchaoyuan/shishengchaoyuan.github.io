@@ -484,15 +484,17 @@ const finalTemplate = `
         font-size: 12px;                 /* 降低字級 */
     }
 
-    /* 全域搜尋標籤適配 */
-    .global-search-label { 
-        font-size: 12px;                 /* 降低字級 */
-    }
-
     /* 程式碼容器方塊適配 */
     .code-container-box { 
         font-size: 18px;                 /* 調整程式碼字型大小為 18px 以利手機閱讀 */
+        padding: 1em 4px 1em 4px !important;       /*  调整容器内边距，给右侧留出安全距离 右侧增加*/
     }
+
+    /*  避免换行模式下代码文字直接死贴右边界 */
+     .line-text-col {
+        padding-right: 8px !important;
+    }
+
 }
     </style>
 </head>
@@ -555,8 +557,8 @@ const finalTemplate = `
                 <button onclick="jumpToFirst()">首行</button>
                 <input type="number" id="jumpInput" placeholder="行" onkeypress="handleEnter(event)">
                 <button onclick="doJump()">跳转</button>
-                <button onclick="changeFontSize(2)">A+</button>
-                <button onclick="changeFontSize(-2)">A-</button>
+                <button onclick="changeFontSize(1)">A+</button>
+                <button onclick="changeFontSize(-1)">A-</button>
                 <button onclick="toggleWrap()">换行</button>
             </div>
         </div>
