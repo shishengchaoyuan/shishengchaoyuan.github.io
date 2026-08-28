@@ -82,16 +82,12 @@ function scanDirectory(currentPath) {
                 return { name: f, isDirectory: isDir };
             })
             .sort((a, b) => {
-                // 1. 特殊规则：名为“道藏”的项强制排在最后
-                if (a.name === '道藏' && b.name !== '道藏') return 1;
-                if (b.name === '道藏' && a.name !== '道藏') return -1;
-
-                // 2. 文件夹排在文件后面（文件在上，文件夹在下）
+                // 1. 类型规则：文件排在前面，文件夹排在后面
                 if (!a.isDirectory && b.isDirectory) return -1;
                 if (a.isDirectory && !b.isDirectory) return 1;
 
-                // 3. 同类型（同为文件或同为文件夹）按名称自然排序
-                return a.name.localeCompare(b.name, 'zh-CN', { numeric: true, sensitivity: 'base' });
+                // 2. 拼音排序规则：同类型之间严格按汉语拼音字母顺序 (A-Z) 升序排列
+                return a.name.localeCompare(b.name, 'zh-Hans-CN-u-co-pinyin');
             })
             .map(item => scanDirectory(path.join(currentPath, item.name)))
             .join('');
@@ -2034,7 +2030,7 @@ const finalTemplate = `
         }
     </script>
 
-    <!-- 页面加载完成后的首屏初始化操作 -->
+<!-- 页面加载完成后的首屏初始化操作 -->
     <script>
         window.addEventListener('DOMContentLoaded', async function() {
             buildDomCache();
@@ -2043,15 +2039,43 @@ const finalTemplate = `
                 toggleSidebar(true);
             }, 50);
 
-            var defaultPath = "README.md"; 
-            var selector = '.file-node[data-path="' + defaultPath + '"] .file-label';
-            var targetNode = document.querySelector(selector);
-            if (targetNode) {
-                loadFile(targetNode);
-            }
+            // 自动寻找并加载默认文件（优先 SUMMARY.md，次选 README.md）
+            loadDefaultFile();
         });
-    </script>
 
+        function loadDefaultFile() {
+            const fileNodes = Array.from(document.querySelectorAll('.file-node'));
+            
+            // 1. 优先查找 SUMMARY.md
+            let targetNode = fileNodes.find(node => {
+                const path = (node.getAttribute('data-path') || '').toLowerCase();
+                return path.endsWith('summary.md');
+            });
+
+            // 2. 如果没找到 SUMMARY.md，查找 README.md
+            if (!targetNode) {
+                targetNode = fileNodes.find(node => {
+                    const path = (node.getAttribute('data-path') || '').toLowerCase();
+                    return path.endsWith('readme.md');
+                });
+            }
+
+            // 3. 确定最终要加载的 label 元素
+            let labelToClick = null;
+            if (targetNode) {
+                labelToClick = targetNode.querySelector('.file-label');
+            } else {
+                // 4. 若两者都不存在，默认选列表中的第一个文件
+                labelToClick = document.querySelector('.file-label');
+            }
+
+            // 5. 触发文件加载
+            if (labelToClick) {
+                loadFile(labelToClick);
+            }
+        }
+    </script>
+    
 </body>
 </html>
 `;
