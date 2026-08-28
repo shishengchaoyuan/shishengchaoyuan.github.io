@@ -1,0 +1,55 @@
+name: Build and Deploy Static Site
+
+# 触发条件配置
+on:
+  push:
+    branches:
+      - main     # 当提交/合并代码到 main 分支时自动触发（如果是 master 分支可改为 master）
+      - master   # 同时兼容 master 分支
+  workflow_dispatch: # 支持在 GitHub Actions 页面手动点击按钮触发构建
+
+# 权限设置：必须开启 contents: write 权限，才能将生成的文件 commit/push 回仓库
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行环境
+
+    steps:
+      # 第一步：拉取仓库源码
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取完整历史记录，方便在提交变更时精确对比
+
+      # 第二步：安装 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # 使用 Stable 的 Node.js 18 版本来运行 build.js
+
+      # 第三步：执行构建脚本生成 index.html 和 _index_cache/
+      - name: Execute Build Script
+        run: node build.js
+
+      # 第四步：将构建产物提交回原分支
+      - name: Commit and Push Changes
+        run: |
+          # 1. 配置 Git 提交身份为 GitHub Actions Bot
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Actions"
+          
+          # 2. 将 build.js 生成的 index.html 和 _index_cache 目录添加到暂存区
+          git add index.html _index_cache/
+          
+          # 3. 检查是否有文件改动，若有改动则提交并推送，无改动则优雅跳过
+          if git diff --staged --quiet; then
+            echo "没有产生任何新的改动，跳过 Commit。"
+          else
+            # 增加 [skip ci] 防止自动提交触发无限死循环构建
+            git commit -m "build: update index.html and _index_cache [skip ci]"
+            
+            # 推送到触发当前 Workflow 的原分支（${{ github.ref_name }} 会自动获取当前分支名）
+            git push origin HEAD:${{ github.ref_name }}
+          fi
