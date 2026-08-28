@@ -8,45 +8,48 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # 使用 GitHub Actions 官方缓存机制（不占用 Git 仓库提交）
-      - name: Cache Indexing Data
-        uses: actions/cache@v4
-        with:
-          path: _index_cache
-          key: index-cache-${{ runner.os }}-${{ hashFiles('build.js') }}
-          restore-keys: |
-            index-cache-${{ runner.os }}-
+      # 1. 阻止 GitHub Pages/Jekyll 过滤 _ 开头的下划线目录
+      - name: Create .nojekyll
+        run: touch .nojekyll
 
+      # 2. 执行你的索引生成脚本
       - name: Execute Build Script
         run: node build.js
 
-      - name: Commit and Push Changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Actions"
-          
-          # 只把生成/更新的 index.html 提交到 Git
-          git add index.html
-          
-          if git diff --staged --quiet; then
-            echo "No changes in index.html to commit."
-          else
-            git commit -m "build: update index.html [skip ci]"
-            git push origin HEAD:${{ github.ref_name }}
-          fi
+      # 3. 将整个站点目录（含 _index_cache/）直接打包为 Pages 部署产物
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # 4. 直接发布到 GitHub Pages 服务器，不向 Git 提交任何 commit
+      - name: Deploy to GitHub Actions Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
