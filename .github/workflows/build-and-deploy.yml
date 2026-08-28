@@ -24,27 +24,29 @@ jobs:
         with:
           node-version: '18'
 
+      # 使用 GitHub Actions 官方缓存机制（不占用 Git 仓库提交）
+      - name: Cache Indexing Data
+        uses: actions/cache@v4
+        with:
+          path: _index_cache
+          key: index-cache-${{ runner.os }}-${{ hashFiles('build.js') }}
+          restore-keys: |
+            index-cache-${{ runner.os }}-
+
       - name: Execute Build Script
         run: node build.js
-
-      # 将上万个小文件压缩成单个文件，减轻 Git 压力
-      - name: Archive Cache Files
-        run: |
-          if [ -d "_index_cache" ]; then
-            tar -czf index_cache.tar.gz _index_cache/
-          fi
 
       - name: Commit and Push Changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions"
           
-          # 提交 index.html 和压缩后的缓存文件
-          git add index.html index_cache.tar.gz
+          # 只把生成/更新的 index.html 提交到 Git
+          git add index.html
           
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "No changes in index.html to commit."
           else
-            git commit -m "build: update site index and cache archive [skip ci]"
+            git commit -m "build: update index.html [skip ci]"
             git push origin HEAD:${{ github.ref_name }}
           fi
