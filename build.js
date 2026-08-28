@@ -25,7 +25,7 @@ const SELF_NAME = path.basename(__filename);
 const IGNORE = [
     '.git', 'node_modules', SELF_NAME, 'build.js', 'index.html', '.DS_Store',
     '.github', '_index_cache', 'search_index.json', 'keyword_map.json',
-    '.vscode', '.idea', 'dist', 'build', 'out', 'coverage', '.next'
+    '.vscode', '.idea', 'dist', 'build', 'out', 'coverage', '.next', '.nojekyll'
 ];
 
 // 文件扩展名到 Prism.js 语法高亮语言标识的映射字典
@@ -70,11 +70,30 @@ function scanDirectory(currentPath) {
         let filesList = [];
         try { filesList = fs.readdirSync(currentPath); } catch (err) { return ''; }
 
-        // 过滤忽略项、排序并递归扫描子文件/子目录，拼接为 HTML 节点
+        // 过滤忽略项并生成带属性的对象列表，用于精准排序
         const files = filesList
             .filter(f => !IGNORE.includes(f))
-            .sort()
-            .map(f => scanDirectory(path.join(currentPath, f)))
+            .map(f => {
+                const fullSubPath = path.join(currentPath, f);
+                let isDir = false;
+                try {
+                    isDir = fs.statSync(fullSubPath).isDirectory();
+                } catch (e) { }
+                return { name: f, isDirectory: isDir };
+            })
+            .sort((a, b) => {
+                // 1. 特殊规则：名为“道藏”的项强制排在最后
+                if (a.name === '道藏' && b.name !== '道藏') return 1;
+                if (b.name === '道藏' && a.name !== '道藏') return -1;
+
+                // 2. 文件夹排在文件后面（文件在上，文件夹在下）
+                if (!a.isDirectory && b.isDirectory) return -1;
+                if (a.isDirectory && !b.isDirectory) return 1;
+
+                // 3. 同类型（同为文件或同为文件夹）按名称自然排序
+                return a.name.localeCompare(b.name, 'zh-CN', { numeric: true, sensitivity: 'base' });
+            })
+            .map(item => scanDirectory(path.join(currentPath, item.name)))
             .join('');
 
         // 如果文件夹为空且不是根目录，跳过渲染
@@ -362,30 +381,30 @@ const finalTemplate = `
     
     /* 側邊欄抽屜化設置 */
     .sidebar {
-        position: fixed;                 /* 脫離文件流，固定定位在頁面最上層 */
+        position: fixed;                          /* 脫離文件流，固定定位在頁面最上層 */
         left: 0; 
         top: 0; 
-        height: 100vh;                   /* 佔滿整個螢幕高度 */
-        width: 85vw !important;          /* 寬度佔螢幕視窗的 85%（強制覆蓋 inline 樣式） */
-        max-width: 360px;                /* 限制最大寬度為 360px，避免在大螢幕手機上過寬 */
-        margin-left: 0 !important;       /* 清除左側外邊距 */
+        height: 100vh;                            /* 佔滿整個螢幕高度 */
+        width: 85vw !important;                   /* 寬度佔螢幕視窗的 85%（強制覆蓋 inline 樣式） */
+        max-width: 360px;                         /* 限制最大寬度為 360px，避免在大螢幕手機上過寬 */
+        margin-left: 0 !important;                /* 清除左側外邊距 */
         box-shadow: 4px 0 20px rgba(0,0,0,0.3); /* 增加右側陰影，提升層次感與抽屜視覺效 */
-        transform: translateX(-100%);    /* 預設往左平移 100% 寬度，將抽屜徹底隱藏在畫面外 */
-        transition: transform 0.25s ease;/* 設定 0.25 秒的滑動過渡動畫 */
+        transform: translateX(-100%);             /* 預設往左平移 100% 寬度，將抽屜徹底隱藏在畫面外 */
+        transition: transform 0.25s ease;         /* 設定 0.25 秒的滑動過渡動畫 */
     }
 
      /* 新增：缩小移动端目录树节点字号 */
     .label {
         font-size: 18px !important;
-        padding: 4px 6px !important; /* 同步缩减上下内边距，让排版更紧凑 */
+        padding: 4px 6px !important;             /* 同步缩减上下内边距，让排版更紧凑 */
     }
 
     /* 新增：优化移动端行号列宽度 */
     .line-num-col {
-        min-width: 2.2em !important; /* 默认是 3.5em，移动端调小 */
-        padding-right: 0.4em !important; /* 缩小右侧内边距 */
-        margin-right: 0.5em !important;  /* 缩小与代码文本的间距 */
-        font-size: 12px;                  /* 适当微调行号字号，节省空间 */
+        min-width: 2.2em !important;             /* 默认是 3.5em，移动端调小 */
+        padding-right: 0.4em !important;         /* 缩小右侧内边距 */
+        margin-right: 0.5em !important;          /* 缩小与代码文本的间距 */
+        font-size: 12px;                         /* 适当微调行号字号，节省空间 */
     }
 
     /* 側邊欄顯示狀態：當沒有 .hidden 類名時滑出顯示 */
@@ -404,35 +423,59 @@ const finalTemplate = `
     }
 
     /* 頁首頂欄適配 */
-    .header { 
-        padding: 8px 10px;               /* 縮減頂欄內邊距以節省空間 */
-        gap: 8px;                        /* 子元素間距縮小為 8px */
+    .header {
+        display: flex !important;                  /* 强制启用 Flex 弹性盒布局 */           
+        flex-direction: column !important;         /* 将主轴方向改为垂直方向（上下排列），使面包屑路径在上，按钮区在下 */            
+        gap: 8px !important;                       /* 设置上下两行（路径与按钮组）之间的垂直间距为 8px */             
+        padding: 8px 10px !important;              /* 调整顶栏内边距：上下 8px，左右 10px，适应移动端紧凑空间 */
+            /* 关键修复：顶部增加 14px 内边距，把被状态栏/地址栏遮挡的路径压回可视区域 */
+        padding-top: 14px !important;
+        padding-bottom: 8px !important;
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+        box-sizing: border-box !important;          /* 保证 Padding 不会额外撑大容器的总宽高 */
+        position: relative !important;              /* 确保容器基于正常文档流定位，防止 top 偏移异常 */
+        top: 0 !important; 
     }
 
     /* 麵包屑導航適配 */
-    .breadcrumb { 
-        font-size: 15px;                 /* 降低字級以適應窄屏顯示 */
+    .breadcrumb {        
+        width: 100% !important;                     /* 占据第一行的全部宽度 */            
+        white-space: normal !important;             /* 取消强制单行限制，允许文本遇到边界时自动换行 */            
+        word-break: break-all !important;           /* 遇到超长无空格的文件名或路径时，允许强制断字换行，防止撑破屏幕 */            
+        line-height: 1.5 !important;                /* 设置舒适的行高，防止多行路径重叠挤压 */
+        font-size: 15px;                            /* 降低字級以適應窄屏顯示 */
     }
 
     /* 控制按鈕組適配 */
-    .controls { 
-        justify-content: space-between;  /* 按鈕組兩端對齊，均勻分佈空間 */
-        gap: 4px;                        /* 縮小按鈕間的間距 */
+     .controls { 
+        width: 100% !important;                     /* 占据第二行的全部宽度 */
+        display: flex !important;                   /* 启用 Flex 布局来横向排列内部所有按钮 */
+        flex-wrap: nowrap !important;               /* 核心约束：严禁按钮组二次换行，强制所有按钮保持在同一行内 */
+        justify-content: flex-end !important;       /* 按钮组整体靠右侧对齐 */
+        align-items: center !important;             /* 按钮在垂直方向上居中对齐 */
+        gap: 4px !important;                        /* 缩小按钮之间的水平间距为 4px，防止按钮过多导致溢出 */
+        overflow-x: auto !important;                /* 保护机制：若在极窄屏幕上按钮总宽超出，允许横向滑动查看，不会挤乱页面 */
+        -webkit-overflow-scrolling: touch;          /* 优化 iOS 设备上的滚动流畅度（平滑惯性滑动） */
+        justify-content: space-between;             /* 按鈕組兩端對齊，均勻分佈空間 */
+        gap: 4px;                                   /* 縮小按鈕間的間距 */
     }
 
     /* 控制組內的按鈕適配 */
     .controls button { 
-        padding: 5px 8px;                /* 縮減按鈕內邊距 */
-        font-size: 15px;                 /* 降低按鈕文字字級 */
-        flex: 1 0 auto;                  /* 允許按鈕按比例放大伸展，但不自動壓縮，自動適應寬度 */
-        text-align: center;              /* 按鈕文字居中顯示 */
+        padding: 4px 6px !important;                /* 减少按钮内边距，使其更紧凑 */
+        font-size: 15px !important;                 /* 适当缩小字号，确保小屏能容纳更多文本 */
+        white-space: nowrap !important;             /* 按钮文字本身禁止换行 */
+        flex-shrink: 0 !important;                  /* 核心约束：防止按钮在空间不足时被 Flex 容器无情压缩变窄或变形 */
+        flex: 1 0 auto;                             /* 允許按鈕按比例放大伸展，但不自動壓縮，自動適應寬度 */
+        text-align: center;                         /* 按鈕文字居中顯示 */
     }
 
     /* 數字輸入框適配 */
     input[type="number"] { 
-        width: 50px;                     /* 固定輸入框寬度為 50px */
+        width: 50px;                     /* 固定輸入框寬度為 */
         padding: 4px;                    /* 縮減內邊距 */
-        font-size: 12px;                 /* 降低字級 */
+        font-size: 15px;                 /* 降低字級 */
     }
 
     /* 程式碼片段工作區適配 */
