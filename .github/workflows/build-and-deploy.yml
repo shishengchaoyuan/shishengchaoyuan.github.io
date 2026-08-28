@@ -36,20 +36,28 @@ jobs:
       # 第四步：将构建产物提交回原分支
       - name: Commit and Push Changes
         run: |
-          # 1. 配置 Git 提交身份为 GitHub Actions Bot
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions"
           
-          # 2. 将 build.js 生成的 index.html 和 _index_cache 目录添加到暂存区
-          git add index.html _index_cache/
-          
-          # 3. 检查是否有文件改动，若有改动则提交并推送，无改动则优雅跳过
-          if git diff --staged --quiet; then
-            echo "没有产生任何新的改动，跳过 Commit。"
-          else
-            # 增加 [skip ci] 防止自动提交触发无限死循环构建
-            git commit -m "build: update index.html and _index_cache [skip ci]"
-            
-            # 推送到触发当前 Workflow 的原分支（${{ github.ref_name }} 会自动获取当前分支名）
+          # 1. 调大 Git 传输缓冲区限制 (设置为 500MB)，防止 HTTP 500 / RPC failed
+          git config --local http.postBuffer 524288000
+          git config --local compression 9
+
+          # 2. 先提交 index.html
+          git add index.html
+          if ! git diff --staged --quiet; then
+            git commit -m "build: update index.html [skip ci]"
+          fi
+
+          # 3. 再分批/单独提交 _index_cache 目录
+          git add _index_cache/
+          if ! git diff --staged --quiet; then
+            git commit -m "build: update index cache files [skip ci]"
+          fi
+
+          # 4. 推送到远程
+          if [ -n "$(git status --porcelain)" ] || git log origin/${{ github.ref_name }}..HEAD | grep -q .; then
             git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes to push."
           fi
