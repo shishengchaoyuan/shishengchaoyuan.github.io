@@ -1503,7 +1503,7 @@ const finalTemplate = `
         let currentFile = "";
         let currentFileContentCache = "";
         let currentLang = "text";
-        let fontSize = 15;
+        let fontSize = 18;
         let lastLineNum = 1;
         let currentTheme = "light";
 
