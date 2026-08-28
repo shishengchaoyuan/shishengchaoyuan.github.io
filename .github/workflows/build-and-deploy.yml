@@ -1,63 +1,50 @@
 name: Build and Deploy Static Site
 
-# 触发条件配置
 on:
   push:
     branches:
-      - main     # 当提交/合并代码到 main 分支时自动触发（如果是 master 分支可改为 master）
-      - master   # 同时兼容 master 分支
-  workflow_dispatch: # 支持在 GitHub Actions 页面手动点击按钮触发构建
+      - main
+      - master
+  workflow_dispatch:
 
-# 权限设置：必须开启 contents: write 权限，才能将生成的文件 commit/push 回仓库
 permissions:
   contents: write
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest # 使用最新的 Ubuntu 运行环境
-
+    runs-on: ubuntu-latest
     steps:
-      # 第一步：拉取仓库源码
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取完整历史记录，方便在提交变更时精确对比
+          fetch-depth: 0
 
-      # 第二步：安装 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # 使用 Stable 的 Node.js 18 版本来运行 build.js
+          node-version: '18'
 
-      # 第三步：执行构建脚本生成 index.html 和 _index_cache/
       - name: Execute Build Script
         run: node build.js
 
-      # 第四步：将构建产物提交回原分支
+      # 将上万个小文件压缩成单个文件，减轻 Git 压力
+      - name: Archive Cache Files
+        run: |
+          if [ -d "_index_cache" ]; then
+            tar -czf index_cache.tar.gz _index_cache/
+          fi
+
       - name: Commit and Push Changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Actions"
           
-          # 1. 调大 Git 传输缓冲区限制 (设置为 500MB)，防止 HTTP 500 / RPC failed
-          git config --local http.postBuffer 524288000
-          git config --local compression 9
-
-          # 2. 先提交 index.html
-          git add index.html
-          if ! git diff --staged --quiet; then
-            git commit -m "build: update index.html [skip ci]"
-          fi
-
-          # 3. 再分批/单独提交 _index_cache 目录
-          git add _index_cache/
-          if ! git diff --staged --quiet; then
-            git commit -m "build: update index cache files [skip ci]"
-          fi
-
-          # 4. 推送到远程
-          if [ -n "$(git status --porcelain)" ] || git log origin/${{ github.ref_name }}..HEAD | grep -q .; then
-            git push origin HEAD:${{ github.ref_name }}
+          # 提交 index.html 和压缩后的缓存文件
+          git add index.html index_cache.tar.gz
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
           else
-            echo "No changes to push."
+            git commit -m "build: update site index and cache archive [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
           fi
